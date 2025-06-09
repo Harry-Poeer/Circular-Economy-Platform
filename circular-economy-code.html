@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Circular Economy Platform - Sankey Diagram</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-sankey/0.12.3/d3-sankey.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2d3748;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #4a5568;
+            font-size: 1.1em;
+            margin-bottom: 30px;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .filter-group label {
+            font-weight: 600;
+            color: #2d3748;
+            font-size: 0.9em;
+        }
+        
+        select, button {
+            padding: 8px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            background: white;
+        }
+        
+        select:hover, button:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+        }
+        
+        button {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9em;
+            font-weight: 500;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .chart-container {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: inset 0 4px 8px rgba(0, 0, 0, 0.05);
+            overflow-x: auto;
+        }
+        
+        .node-label {
+            font-size: 12px;
+            font-weight: 600;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+        }
+        
+        .link {
+            opacity: 0.7;
+            transition: opacity 0.3s ease;
+        }
+        
+        .link:hover {
+            opacity: 1;
+        }
+        
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            max-width: 300px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        .info-panel {
+            background: linear-gradient(135deg, #f7fafc, #edf2f7);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .info-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .info-card h4 {
+            margin: 0 0 10px 0;
+            color: #2d3748;
+            font-size: 1.1em;
+        }
+        
+        .info-card p {
+            margin: 5px 0;
+            color: #4a5568;
+            font-size: 0.9em;
+        }
+        
+        .trl-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+        
+        .trl-1, .trl-2, .trl-3 { background: #fed7d7; color: #c53030; }
+        .trl-4, .trl-5, .trl-6 { background: #feebc8; color: #dd6b20; }
+        .trl-7, .trl-8, .trl-9 { background: #c6f6d5; color: #38a169; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Circular Economy Platform</h1>
+        <p class="subtitle">Waste Stream Analysis & Opportunity Mapping</p>
+        
+        <div class="controls">
+            <div class="filter-group">
+                <label>Waste Type:</label>
+                <select id="wasteTypeFilter">
+                    <option value="all">All Types</option>
+                    <option value="hazardous">Hazardous</option>
+                    <option value="non-hazardous">Non-Hazardous</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>TRL Level:</label>
+                <select id="trlFilter">
+                    <option value="all">All TRL</option>
+                    <option value="low">Low (1-3)</option>
+                    <option value="medium">Medium (4-6)</option>
+                    <option value="high">High (7-9)</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Treatment:</label>
+                <select id="treatmentFilter">
+                    <option value="all">All</option>
+                    <option value="minimal">Minimal</option>
+                    <option value="moderate">Moderate</option>
+                    <option value="extensive">Extensive</option>
+                </select>
+            </div>
+            <button onclick="resetFilters()">Reset Filters</button>
+        </div>
+        
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background: #e53e3e;"></div>
+                <span>Hazardous Waste</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #38a169;"></div>
+                <span>Non-Hazardous Waste</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #3182ce;"></div>
+                <span>Treatment Process</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #805ad5;"></div>
+                <span>Opportunities</span>
+            </div>
+        </div>
+        
+        <div class="chart-container">
+            <svg id="sankeyChart"></svg>
+        </div>
+        
+        <div class="info-panel">
+            <h3 style="text-align: center; color: #2d3748; margin-bottom: 20px;">Waste Stream Details</h3>
+            <div class="info-grid" id="wasteDetails"></div>
+        </div>
+    </div>
+    
+    <div class="tooltip" id="tooltip"></div>
+
+    <script>
+        // Comprehensive waste data
+        const wasteData = [
+            {
+                name: "Electronic Waste",
+                type: "hazardous",
+                pretreatment: "extensive",
+                trl: 7,
+                opportunities: ["Metal Recovery", "Plastic Recycling", "Rare Earth Extraction"],
+                volume: 50
+            },
+            {
+                name: "Plastic Waste",
+                type: "non-hazardous",
+                pretreatment: "moderate",
+                trl: 8,
+                opportunities: ["Chemical Recycling", "Mechanical Recycling", "Energy Recovery"],
+                volume: 120
+            },
+            {
+                name: "Food Waste",
+                type: "non-hazardous",
+                pretreatment: "minimal",
+                trl: 9,
+                opportunities: ["Biogas Production", "Compost", "Animal Feed"],
+                volume: 80
+            },
+            {
+                name: "Textile Waste",
+                type: "non-hazardous",
+                pretreatment: "moderate",
+                trl: 6,
+                opportunities: ["Fiber Recovery", "Insulation Material", "Industrial Rags"],
+                volume: 40
+            },
+            {
+                name: "Construction Waste",
+                type: "non-hazardous",
+                pretreatment: "extensive",
+                trl: 8,
+                opportunities: ["Aggregate Production", "Concrete Recycling", "Building Materials"],
+                volume: 150
+            },
+            {
+                name: "Chemical Waste",
+                type: "hazardous",
+                pretreatment: "extensive",
+                trl: 5,
+                opportunities: ["Solvent Recovery", "Chemical Synthesis", "Fuel Production"],
+                volume: 30
+            },
+            {
+                name: "Battery Waste",
+                type: "hazardous",
+                pretreatment: "extensive",
+                trl: 6,
+                opportunities: ["Lithium Recovery", "Cobalt Extraction", "Metal Recycling"],
+                volume: 25
+            },
+            {
+                name: "Paper Waste",
+                type: "non-hazardous",
+                pretreatment: "minimal",
+                trl: 9,
+                opportunities: ["Paper Recycling", "Cardboard Production", "Pulp Recovery"],
+                volume: 90
+            }
+        ];
+
+        let filteredData = [...wasteData];
+        let currentChart;
+
+        function createSankeyData(data) {
+            const nodes = [];
+            const links = [];
+            let nodeIndex = 0;
+
+            // Create node mappings
+            const nodeMap = new Map();
+            
+            // Add waste nodes
+            data.forEach(waste => {
+                const nodeName = waste.name;
+                if (!nodeMap.has(nodeName)) {
+                    nodes.push({
+                        name: nodeName,
+                        category: 'waste',
+                        type: waste.type,
+                        trl: waste.trl,
+                        pretreatment: waste.pretreatment
+                    });
+                    nodeMap.set(nodeName, nodeIndex++);
+                }
+            });
+
+            // Add treatment nodes
+            const treatments = ['Minimal Treatment', 'Moderate Treatment', 'Extensive Treatment'];
+            treatments.forEach(treatment => {
+                nodes.push({
+                    name: treatment,
+                    category: 'treatment'
+                });
+                nodeMap.set(treatment, nodeIndex++);
+            });
+
+            // Add opportunity nodes
+            const allOpportunities = [...new Set(data.flatMap(w => w.opportunities))];
+            allOpportunities.forEach(opp => {
+                nodes.push({
+                    name: opp,
+                    category: 'opportunity'
+                });
+                nodeMap.set(opp, nodeIndex++);
+            });
+
+            // Create links
+            data.forEach(waste => {
+                const treatmentMap = {
+                    'minimal': 'Minimal Treatment',
+                    'moderate': 'Moderate Treatment',
+                    'extensive': 'Extensive Treatment'
+                };
+                
+                const treatment = treatmentMap[waste.pretreatment];
+                
+                // Waste to treatment
+                links.push({
+                    source: nodeMap.get(waste.name),
+                    target: nodeMap.get(treatment),
+                    value: waste.volume,
+                    wasteType: waste.type,
+                    trl: waste.trl
+                });
+
+                // Treatment to opportunities
+                waste.opportunities.forEach(opp => {
+                    links.push({
+                        source: nodeMap.get(treatment),
+                        target: nodeMap.get(opp),
+                        value: waste.volume / waste.opportunities.length,
+                        wasteType: waste.type,
+                        trl: waste.trl
+                    });
+                });
+            });
+
+            return { nodes, links };
+        }
+
+        function renderSankey(data) {
+            const container = d3.select("#sankeyChart");
+            container.selectAll("*").remove();
+
+            const margin = { top: 20, right: 20, bottom: 20, left: 20 };
+            const width = 1200 - margin.left - margin.right;
+            const height = 600 - margin.top - margin.bottom;
+
+            const svg = container
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom);
+
+            const g = svg.append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+
+            const sankeyData = createSankeyData(data);
+            
+            const sankey = d3.sankey()
+                .nodeWidth(20)
+                .nodePadding(10)
+                .extent([[1, 1], [width - 1, height - 6]]);
+
+            const { nodes, links } = sankey(sankeyData);
+
+            // Color scales
+            const colorScale = d3.scaleOrdinal()
+                .domain(['waste', 'treatment', 'opportunity'])
+                .range(['#4299e1', '#3182ce', '#805ad5']);
+
+            const wasteTypeColor = d3.scaleOrdinal()
+                .domain(['hazardous', 'non-hazardous'])
+                .range(['#e53e3e', '#38a169']);
+
+            // Links
+            g.append("g")
+                .selectAll("path")
+                .data(links)
+                .join("path")
+                .attr("class", "link")
+                .attr("d", d3.sankeyLinkHorizontal())
+                .attr("stroke", d => d.wasteType ? wasteTypeColor(d.wasteType) : '#94a3b8')
+                .attr("stroke-width", d => Math.max(1, d.width))
+                .attr("fill", "none")
+                .on("mouseover", function(event, d) {
+                    d3.select(this).attr("stroke-opacity", 1);
+                    showTooltip(event, `Flow: ${d.value.toFixed(1)} units<br>TRL: ${d.trl || 'N/A'}`);
+                })
+                .on("mouseout", function(event, d) {
+                    d3.select(this).attr("stroke-opacity", 0.7);
+                    hideTooltip();
+                });
+
+            // Nodes
+            const nodeGroups = g.append("g")
+                .selectAll("g")
+                .data(nodes)
+                .join("g");
+
+            nodeGroups.append("rect")
+                .attr("x", d => d.x0)
+                .attr("y", d => d.y0)
+                .attr("height", d => d.y1 - d.y0)
+                .attr("width", d => d.x1 - d.x0)
+                .attr("fill", d => {
+                    if (d.category === 'waste') {
+                        return d.type ? wasteTypeColor(d.type) : '#4299e1';
+                    }
+                    return colorScale(d.category);
+                })
+                .attr("stroke", "#000")
+                .attr("stroke-width", 0.5)
+                .on("mouseover", function(event, d) {
+                    const info = d.category === 'waste' ? 
+                        `${d.name}<br>Type: ${d.type}<br>TRL: ${d.trl}<br>Treatment: ${d.pretreatment}` :
+                        d.name;
+                    showTooltip(event, info);
+                })
+                .on("mouseout", hideTooltip);
+
+            // Labels
+            nodeGroups.append("text")
+                .attr("class", "node-label")
+                .attr("x", d => d.x0 < width / 2 ? d.x1 + 6 : d.x0 - 6)
+                .attr("y", d => (d.y1 + d.y0) / 2)
+                .attr("dy", "0.35em")
+                .attr("text-anchor", d => d.x0 < width / 2 ? "start" : "end")
+                .text(d => d.name)
+                .attr("fill", "#2d3748");
+
+            currentChart = { svg, data };
+        }
+
+        function showTooltip(event, content) {
+            const tooltip = d3.select("#tooltip");
+            tooltip.html(content)
+                .style("opacity", 1)
+                .style("left", (event.pageX + 10) + "px")
+                .style("top", (event.pageY - 10) + "px");
+        }
+
+        function hideTooltip() {
+            d3.select("#tooltip").style("opacity", 0);
+        }
+
+        function updateWasteDetails(data) {
+            const detailsContainer = d3.select("#wasteDetails");
+            detailsContainer.selectAll("*").remove();
+
+            data.forEach(waste => {
+                const card = detailsContainer.append("div").attr("class", "info-card");
+                
+                card.append("h4").html(`${waste.name} 
+                    <span class="trl-badge trl-${Math.ceil(waste.trl/3)*3-2}">${waste.trl <= 3 ? 'TRL 1-3' : waste.trl <= 6 ? 'TRL 4-6' : 'TRL 7-9'}</span>`);
+                
+                card.append("p").html(`<strong>Type:</strong> ${waste.type.charAt(0).toUpperCase() + waste.type.slice(1)}`);
+                card.append("p").html(`<strong>Pre-treatment:</strong> ${waste.pretreatment.charAt(0).toUpperCase() + waste.pretreatment.slice(1)}`);
+                card.append("p").html(`<strong>Volume:</strong> ${waste.volume} units`);
+                card.append("p").html(`<strong>Opportunities:</strong> ${waste.opportunities.join(', ')}`);
+            });
+        }
+
+        function applyFilters() {
+            const wasteType = document.getElementById('wasteTypeFilter').value;
+            const trlLevel = document.getElementById('trlFilter').value;
+            const treatment = document.getElementById('treatmentFilter').value;
+
+            filteredData = wasteData.filter(waste => {
+                let matches = true;
+
+                if (wasteType !== 'all' && waste.type !== wasteType) {
+                    matches = false;
+                }
+
+                if (trlLevel !== 'all') {
+                    if (trlLevel === 'low' && waste.trl > 3) matches = false;
+                    if (trlLevel === 'medium' && (waste.trl < 4 || waste.trl > 6)) matches = false;
+                    if (trlLevel === 'high' && waste.trl < 7) matches = false;
+                }
+
+                if (treatment !== 'all' && waste.pretreatment !== treatment) {
+                    matches = false;
+                }
+
+                return matches;
+            });
+
+            renderSankey(filteredData);
+            updateWasteDetails(filteredData);
+        }
+
+        function resetFilters() {
+            document.getElementById('wasteTypeFilter').value = 'all';
+            document.getElementById('trlFilter').value = 'all';
+            document.getElementById('treatmentFilter').value = 'all';
+            applyFilters();
+        }
+
+        // Event listeners
+        document.getElementById('wasteTypeFilter').addEventListener('change', applyFilters);
+        document.getElementById('trlFilter').addEventListener('change', applyFilters);
+        document.getElementById('treatmentFilter').addEventListener('change', applyFilters);
+
+        // Initial render
+        renderSankey(filteredData);
+        updateWasteDetails(filteredData);
+    </script>
+</body>
+</html>
